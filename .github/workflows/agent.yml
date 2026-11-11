@@ -1,0 +1,56 @@
+name: Build agent jar
+
+# Compiles the minimal Java agent (agent/) against android.jar and turns it
+# into a DEX jar with d8, then uploads it as a build artifact. On a v* tag
+# it also attaches the jar to a GitHub Release.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agent/**"
+      - ".github/workflows/agent.yml"
+  workflow_dispatch:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Compile agent
+        run: |
+          ANDROID_JAR="$ANDROID_HOME/platforms/android-34/android.jar"
+          test -f "$ANDROID_JAR" || { echo "android.jar not found at $ANDROID_JAR"; ls "$ANDROID_HOME/platforms/"; exit 1; }
+          mkdir -p out
+          javac -cp "$ANDROID_JAR" -d out $(find agent/src -name '*.java')
+          mkdir -p dist-agent
+          "$ANDROID_HOME/build-tools/34.0.0/d8" --output dist-agent/panda-kit-replica.jar --lib "$ANDROID_JAR" out
+          ls -lh dist-agent/
+          unzip -l dist-agent/panda-kit-replica.jar | head -n 20
+
+      - name: Upload jar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: panda-kit-replica
+          path: dist-agent/panda-kit-replica.jar
+          if-no-files-found: error
+
+      - name: Attach jar to Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-agent/panda-kit-replica.jar
