@@ -40,7 +40,7 @@ jobs:
 
       - name: Install Android platform and build-tools
         run: |
-          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 2 -name sdkmanager | head -n 1)
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 4 -name sdkmanager -type f | head -n 1)
           echo "sdkmanager: $SDKMANAGER"
           test -x "$SDKMANAGER" || { echo "sdkmanager not found under $ANDROID_HOME/cmdline-tools"; exit 1; }
           yes | "$SDKMANAGER" --licenses >/dev/null
