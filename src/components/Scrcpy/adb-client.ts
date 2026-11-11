@@ -93,8 +93,9 @@ export class AdbClient {
             this.pandakit = null;
             this.pandakitStatus = '正在自动推送 PandaKit agent…';
             const jarBytes = await fetchBundledAgentJar();
+            this.pandakitStatus = `正在推送 PandaKit agent（jar ${jarBytes.byteLength} 字节）…`;
             this.pandakit = await pushAndStartAgent(adb, jarBytes, REPLICA_MAIN_CLASS);
-            this.pandakitStatus = 'PandaKit agent 已自动推送并启动';
+            this.pandakitStatus = `PandaKit agent 已自动推送并启动（jar ${jarBytes.byteLength} 字节）`;
             return this.pandakit;
         } catch (e) {
             this.pandakit = null;

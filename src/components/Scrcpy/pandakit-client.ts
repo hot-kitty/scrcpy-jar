@@ -21,7 +21,10 @@ export const ORIGINAL_MAIN_CLASS = 'com.panda.Main';
 export const BUNDLED_AGENT_JAR_URL = `${import.meta.env.BASE_URL}panda-kit-replica.jar`;
 
 export async function fetchBundledAgentJar(): Promise<ArrayBuffer> {
-    const res = await fetch(BUNDLED_AGENT_JAR_URL);
+    // GitHub Pages 给 jar 发 Cache-Control: max-age=600，默认 fetch 会在
+    // 10 分钟内直接用缓存里的旧 jar，导致新修复的 jar 推不上去。
+    // cache: 'no-store' 强制每次都从服务器取最新 jar。
+    const res = await fetch(BUNDLED_AGENT_JAR_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error(`下载内置 agent 失败：HTTP ${res.status}（${BUNDLED_AGENT_JAR_URL}）`);
     return await res.arrayBuffer();
 }
