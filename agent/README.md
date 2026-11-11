@@ -13,12 +13,21 @@ It does **not** contain any decompiled Pandatest code.
 
 ## Build (needs Android SDK, not installed on this machine)
 
+GitHub Actions already builds this on every push to `main` (see
+`.github/workflows/agent.yml`): JDK 17 + the runner's preinstalled Android
+SDK, API 34. Download the `panda-kit-replica` artifact from the latest
+successful run instead of building locally when you can.
+
+To build locally:
+
 ```bash
 # 1. Compile against android.jar (API 26+)
 javac -cp $ANDROID_HOME/platforms/android-34/android.jar -d out \
   $(find src -name '*.java')
-# 2. Turn classes into a DEX jar
-d8 --output panda-kit-replica.jar --lib $ANDROID_HOME/platforms/android-34/android.jar out
+# 2. Pack the classes into a jar first — d8 does NOT accept the raw
+#    class-output directory ("Unsupported source file type" if passed directly)
+jar --create --file agent-classes.jar -C out .
+d8 --output panda-kit-replica.jar --lib $ANDROID_HOME/platforms/android-34/android.jar agent-classes.jar
 # 3. Push + start on the device (from the web client, or manually)
 adb push panda-kit-replica.jar /data/local/tmp/panda-kit.jar
 adb shell CLASSPATH=/data/local/tmp/panda-kit.jar app_process / com.example.pandakit.Main
