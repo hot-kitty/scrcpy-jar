@@ -97,6 +97,12 @@ public final class Main {
             }
         } catch (IOException e) {
             // Client disconnected; nothing to do.
+        } catch (Throwable t) {
+            // A command handler must never kill the server silently: log
+            // it so the failure is visible instead of the client just
+            // seeing the socket close mid-response.
+            System.out.println("Command handler failed: " + t);
+            t.printStackTrace(System.out);
         } finally {
             try { socket.close(); } catch (IOException ignored) {}
         }
