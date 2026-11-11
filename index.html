@@ -1,34 +1,14 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Web ADB Replica</title>
-<style>
-  body { font-family: system-ui, sans-serif; margin: 24px; max-width: 900px; }
-  button { margin-right: 8px; padding: 6px 12px; }
-  #files li, #apps li { margin: 4px 0; }
-  #apps img { width: 32px; height: 32px; vertical-align: middle; margin-right: 8px; }
-  .dir { font-weight: 600; }
-</style>
-</head>
-<body>
-<h1>Web ADB Replica</h1>
-<p>
-  <button id="connect">连接设备 (WebUSB)</button>
-  <button id="disconnect" disabled>断开</button>
-  <span id="status">未连接</span>
-</p>
-<h2>文件</h2>
-<p>
-  <input id="path" value="/sdcard" size="40" />
-  <button id="list" disabled>列出目录</button>
-  <button id="up" disabled>上一级</button>
-</p>
-<ul id="files"></ul>
-<h2>应用</h2>
-<p><button id="apps" disabled>加载应用列表</button></p>
-<ul id="apps"></ul>
-<script type="module" src="/src/main.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="./src/assets/logo.svg">
+    <link rel="manifest" href="./site.webmanifest">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANDASCRCPY</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
 </html>
