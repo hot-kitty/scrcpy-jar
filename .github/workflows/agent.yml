@@ -3,6 +3,12 @@ name: Build agent jar
 # Compiles the minimal Java agent (agent/) against android.jar and turns it
 # into a DEX jar with d8, then uploads it as a build artifact. On a v* tag
 # it also attaches the jar to a GitHub Release.
+#
+# Note: do NOT use android-actions/setup-android here — it fails on the
+# GitHub-hosted runner because its sdkmanager call looks for the retired
+# "tools" package ("Failed to find package 'tools'", exit code 1).
+# The runner already ships an Android SDK at /usr/local/lib/android/sdk,
+# so this workflow uses that SDK directly.
 on:
   push:
     branches: [main]
@@ -16,6 +22,10 @@ on:
 permissions:
   contents: write
 
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,13 +38,19 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install Android platform and build-tools
+        run: |
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 2 -name sdkmanager | head -n 1)
+          echo "sdkmanager: $SDKMANAGER"
+          test -x "$SDKMANAGER" || { echo "sdkmanager not found under $ANDROID_HOME/cmdline-tools"; exit 1; }
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0"
+          ls "$ANDROID_HOME/platforms/android-34/android.jar"
+          ls "$ANDROID_HOME/build-tools/34.0.0/d8"
 
       - name: Compile agent
         run: |
           ANDROID_JAR="$ANDROID_HOME/platforms/android-34/android.jar"
-          test -f "$ANDROID_JAR" || { echo "android.jar not found at $ANDROID_JAR"; ls "$ANDROID_HOME/platforms/"; exit 1; }
           mkdir -p out
           javac -cp "$ANDROID_JAR" -d out $(find agent/src -name '*.java')
           mkdir -p dist-agent
