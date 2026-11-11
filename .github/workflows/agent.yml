@@ -54,7 +54,11 @@ jobs:
           mkdir -p out
           javac -cp "$ANDROID_JAR" -d out $(find agent/src -name '*.java')
           mkdir -p dist-agent
-          "$ANDROID_HOME/build-tools/34.0.0/d8" --output dist-agent/panda-kit-replica.jar --lib "$ANDROID_JAR" out
+          # d8 does not accept the raw class-output directory as input, so
+          # pack the classes into a jar first ("Unsupported source file type"
+          # if the directory is passed directly).
+          jar --create --file agent-classes.jar -C out .
+          "$ANDROID_HOME/build-tools/34.0.0/d8" --output dist-agent/panda-kit-replica.jar --lib "$ANDROID_JAR" agent-classes.jar
           ls -lh dist-agent/
           unzip -l dist-agent/panda-kit-replica.jar | head -n 20
 
