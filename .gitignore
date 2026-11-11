@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.jar
+*.dex
+*.apk
+# Extracted Pandatest assets — proprietary, never commit them.
+# They live in the local analysis folder, outside this repo.
+pandatest-rea/
+app/
+*.har
+.DS_Store

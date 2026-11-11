@@ -1,0 +1,1 @@
+{"dependencies":{"@yume-chan/adb":"^2.1.0","@yume-chan/adb-daemon-webusb":"^2.1.0"},"description":"Clean-room replica of Pandatest Web ADB: WebUSB file browser + PandaKit-compatible app list / icons","devDependencies":{"vite":"^6.0.0"},"name":"scrcpy-jar","private":true,"scripts":{"build":"vite build","dev":"vite"},"type":"module","version":"0.1.0"}
