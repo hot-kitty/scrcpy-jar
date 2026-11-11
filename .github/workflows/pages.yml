@@ -17,6 +17,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,6 +27,35 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # agent jar 和前端资源一起发布：和 agent.yml 同一套编译步骤，
+      # 编好放进 public/，随站点同源提供，浏览器连上设备后自动取回推送。
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Install Android platform and build-tools
+        run: |
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 4 -name sdkmanager -type f | head -n 1)
+          echo "sdkmanager: $SDKMANAGER"
+          test -x "$SDKMANAGER" || { echo "sdkmanager not found under $ANDROID_HOME/cmdline-tools" ; exit 1; }
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0"
+          ls "$ANDROID_HOME/platforms/android-34/android.jar"
+          ls "$ANDROID_HOME/build-tools/34.0.0/d8"
+      - name: Build agent jar into public/
+        run: |
+          ANDROID_JAR="$ANDROID_HOME/platforms/android-34/android.jar"
+          mkdir -p out
+          javac -cp "$ANDROID_JAR" -d out $(find agent/src -name '*.java')
+          mkdir -p dist-agent
+          # d8 does not accept the raw class-output directory as input, so
+          # pack the classes into a jar first ("Unsupported source file type"
+          # if the directory is passed directly).
+          jar --create --file agent-classes.jar -C out .
+          "$ANDROID_HOME/build-tools/34.0.0/d8" --output dist-agent/panda-kit-replica.jar --lib "$ANDROID_JAR" agent-classes.jar
+          cp dist-agent/panda-kit-replica.jar public/panda-kit-replica.jar
+          ls -lh public/panda-kit-replica.jar
       - run: npm run build
         env:
           VITE_BASE: /scrcpy-jar/

@@ -23,10 +23,16 @@
               </v-card-title>
               <v-card-text class="pt-3 pb-3">
                 <div class="text-body-2 mb-2">{{ pandakitStatus }}</div>
-                <label class="d-flex align-center gap-2">
-                  <input type="file" accept=".jar" :disabled="pandakitLoading" @change="onPandaKitJarSelected" />
-                  <span class="text-caption">选 panda-kit-replica.jar（Build agent jar 产物）推送到手机并启动</span>
-                </label>
+                <v-btn
+                  color="primary"
+                  variant="tonal"
+                  size="small"
+                  :loading="pandakitLoading"
+                  @click="retryPandaKit"
+                >
+                  重试自动推送
+                </v-btn>
+                <span class="text-caption ml-2">agent 随站点一起发布，连接设备时自动推送，无需手动选文件</span>
               </v-card-text>
             </v-card>
           </div>
@@ -194,7 +200,7 @@ import DeviceInstall from './DeviceInstall.vue';
 import { PackageManager } from "@yume-chan/android-bin";
 import type { PackageManagerListPackagesResult } from "@yume-chan/android-bin";
 import client from '../Scrcpy/adb-client';
-import { PandaKit, pushAndStartAgent, REPLICA_MAIN_CLASS } from '../Scrcpy/pandakit-client';
+import type { PandaKit } from '../Scrcpy/pandakit-client';
 import { saveAs } from 'file-saver';
 
 interface ExtendedPackageInfo extends PackageManagerListPackagesResult {
@@ -208,10 +214,11 @@ const loading = ref(false);
 const search = ref('');
 const apps = ref<ExtendedPackageInfo[]>([]);
 // PandaKit：用我们自己的 agent（cmd 10）拿真实应用名 + 图标，`pm list` 给不了图标。
-// jar 不在仓库里：从 Build agent jar 产物下载 panda-kit-replica.jar 后在这里选文件推送。
+// agent 在设备连接时由 adb-client 自动推送（jar 随前端资源一起发布，同源取回），
+// 这里只负责把图标合并进列表和显示状态；失败时可点重试（仍是自动推送，不用选文件）。
 const pandakitKit = ref<PandaKit | null>(null);
 const pandakitLoading = ref(false);
-const pandakitStatus = ref('未推送 PandaKit agent：应用名是包名最后一段，无图标');
+const pandakitStatus = ref('未连接');
 const packageManager = ref<PackageManager | null>(null);
 const showError = ref(false);
 const errorMessage = ref('');
@@ -275,16 +282,17 @@ const refreshAppList = async () => {
   }
 };
 
-const loadPandaKitIcons = async (file: File) => {
+const refreshPandaKitIcons = async () => {
   if (!client.device) return;
   pandakitLoading.value = true;
-  pandakitStatus.value = '正在推送 agent 到手机…';
   try {
-    const jarBytes = await file.arrayBuffer();
-    await pandakitKit.value?.dispose().catch(() => {});
-    pandakitKit.value = await pushAndStartAgent(client.device, jarBytes, REPLICA_MAIN_CLASS);
-    pandakitStatus.value = 'agent 已启动，正在拉取应用名和图标…';
-    const kitApps = await pandakitKit.value.listApps(3, 64);
+    const kit = await client.pandakitReady;
+    pandakitKit.value = kit;
+    if (!kit) {
+      pandakitStatus.value = client.pandakitStatus;
+      return;
+    }
+    const kitApps = await kit.listApps(3, 64);
     const byPackage = new Map(kitApps.map((a) => [a.packageName, a]));
     apps.value = apps.value.map((app) => {
       const kitApp = byPackage.get(app.packageName);
@@ -293,7 +301,7 @@ const loadPandaKitIcons = async (file: File) => {
         : app;
     });
     const withIcon = apps.value.filter((a) => a.iconDataUrl).length;
-    pandakitStatus.value = `PandaKit 已连接：${kitApps.length} 个应用，${withIcon} 个带图标`;
+    pandakitStatus.value = `PandaKit 已连接：${kitApps.length} 个应用，${withIcon} 个带图标（连接时自动推送）`;
   } catch (error) {
     console.error('PandaKit 加载失败:', error);
     pandakitStatus.value = `PandaKit 失败：${error instanceof Error ? error.message : error}（截图 cmd 120 不在此 jar 实现，属预期）`;
@@ -302,9 +310,11 @@ const loadPandaKitIcons = async (file: File) => {
   }
 };
 
-const onPandaKitJarSelected = (event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (file) void loadPandaKitIcons(file);
+const retryPandaKit = async () => {
+  if (!client.device) return;
+  pandakitStatus.value = '正在重试自动推送…';
+  await client.retryPandaKit();
+  await refreshPandaKitIcons();
 };
 
 const uninstallApp = (app: ExtendedPackageInfo) => {
@@ -453,12 +463,12 @@ watch(() => client.device, async (newDevice) => {
   if (newDevice) {
     packageManager.value = new PackageManager(newDevice);
     await refreshAppList();
+    await refreshPandaKitIcons();
   } else {
     packageManager.value = null;
     apps.value = [];
-    void pandakitKit.value?.dispose().catch(() => {});
     pandakitKit.value = null;
-    pandakitStatus.value = '未推送 PandaKit agent：应用名是包名最后一段，无图标';
+    pandakitStatus.value = '未连接';
   }
 });
 

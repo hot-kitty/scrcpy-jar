@@ -34,13 +34,17 @@ PandaScrcpy 的 `src/components/Scrcpy/adb-client.ts` 用的正是 2.x 的
 
 - 构建：`.github/workflows/agent.yml` 用 JDK 17 + Android SDK + `d8`
   编译 `agent/`，产物是 `panda-kit-replica`（run #6：5,205 字节，
-  仅 cmd 10/20/100）。
-- 用法：在应用管理页的 “PandaKit 图标模式” 卡片里选择下载好的
-  `panda-kit-replica.jar`，页面会把它推到 `/data/local/tmp/panda-kit.jar`，
-  以 `CLASSPATH=/data/local/tmp/panda-kit.jar app_process /
+  仅 cmd 10/20/100）；`.github/workflows/pages.yml` 在部署站点时用同一套
+  步骤现编一份，放进 `public/panda-kit-replica.jar`，随前端资源一起发布，
+  地址是 `/scrcpy-jar/panda-kit-replica.jar`。
+- 用法：不用手动选文件。设备一连上，`src/components/Scrcpy/adb-client.ts`
+  就自动取回本站内置的 jar，推到 `/data/local/tmp/panda-kit.jar`，以
+  `CLASSPATH=/data/local/tmp/panda-kit.jar app_process /
   com.example.pandakit.Main` 启动（注意类名是 `com.example.pandakit.Main`，
   不是原版的 `com.panda.Main`），再连 `localabstract:panda-1.1.0` 拉
-  应用名和图标，合并进应用列表。
+  应用名和图标，合并进应用列表。推送失败不影响连接本身（投屏、pm 应用
+  列表照常用），应用管理页的 “PandaKit 图标模式” 卡片会显示失败原因，
+  点 “重试自动推送” 可再试一次。
 - 已知限制：截图 cmd 120 不在此 jar 实现，调用会失败，是预期的；
   大小/时间字段目前返回 0。jar 没有真机验证过守护进程行为。
 

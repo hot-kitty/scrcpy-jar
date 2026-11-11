@@ -17,6 +17,15 @@ const ADDRESSES = ['localabstract:panda-1.1.0', 'tcp:43305'];
 export const REPLICA_MAIN_CLASS = 'com.example.pandakit.Main';
 export const ORIGINAL_MAIN_CLASS = 'com.panda.Main';
 
+/** agent jar 随前端资源一起发布（CI 在构建站点时把它编好放进 public/），同源取回。 */
+export const BUNDLED_AGENT_JAR_URL = `${import.meta.env.BASE_URL}panda-kit-replica.jar`;
+
+export async function fetchBundledAgentJar(): Promise<ArrayBuffer> {
+    const res = await fetch(BUNDLED_AGENT_JAR_URL);
+    if (!res.ok) throw new Error(`下载内置 agent 失败：HTTP ${res.status}（${BUNDLED_AGENT_JAR_URL}）`);
+    return await res.arrayBuffer();
+}
+
 export function bytesToPngDataUrl(bytes: Uint8Array | null | undefined): string | null {
     if (!bytes || bytes.length === 0) return null;
     let binary = '';
